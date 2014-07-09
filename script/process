@@ -1,0 +1,40 @@
+#!/usr/bin/env ruby
+
+require 'csv'
+require 'pathname'
+
+def to_decimal(row, type)
+  degrees = (type == :lat ? row[:latitude_degrees] : row[:longitude_degrees]).to_f
+  minutes = (type == :lat ? row[:latitude_minutes] : row[:longitude_minutes]).to_f
+  seconds = (type == :lat ? row[:latitude_seconds] : row[:longitude_seconds]).to_f
+
+  degrees + (minutes/60.0) + (seconds/3600.0)
+end
+
+out_headers = [:id, :vehicles, :pedestrians, :cyclist, :fatalities, :injuries, :date, :lat, :lon]
+in_headers  = CSV.read('meta/headers.csv').first
+out_file    = CSV.open('crashes.csv', 'w', :headers => out_headers, :write_headers => true)
+
+Pathname.glob('raw/*.txt').each do |file|
+  rows = CSV.read(file,
+    :headers => in_headers,
+    :header_converters => :symbol).select { |row| row[:record_type].to_i == 1 }
+
+  rows.each do |row|
+    row[:crash_hour] = '00' if row[:crash_hour].to_i > 24
+
+    out_file << [
+      row[:crash_id].strip,
+      row[:total_vehicle_count],
+      row[:total_pedestrian_count],
+      row[:total_pedalcyclist_count],
+      row[:total_fatality_count],
+      row[:total_nonfatal_injury_count],
+      "#{row[:crash_month].to_i}/#{row[:crash_day].to_i}/#{row[:crash_year].to_i} #{row[:crash_hour].to_i}:00",
+      to_decimal(row, :lat),
+      to_decimal(row, :long)
+    ]
+  end
+end
+
+out_file.close
