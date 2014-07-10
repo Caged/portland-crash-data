@@ -8,7 +8,8 @@ def to_decimal(row, type)
   minutes = (type == :lat ? row[:latitude_minutes] : row[:longitude_minutes]).to_f
   seconds = (type == :lat ? row[:latitude_seconds] : row[:longitude_seconds]).to_f
 
-  degrees + (minutes/60.0) + (seconds/3600.0)
+  flip = (degrees < 0) ? -1 : 1
+  flip * (degrees.abs + (minutes / 60.0) + (seconds/3600.0))
 end
 
 out_headers = [:id, :vehicles, :pedestrians, :cyclist, :fatalities, :injuries, :date, :lat, :lon]
