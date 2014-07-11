@@ -1,5 +1,158 @@
 #!/usr/bin/env ruby
 
+# crash_id
+# record_type
+# vehicle_id
+# participant_id
+# participant_display_seq
+# vehicle_coded_seq
+# participant_vehicle_seq
+# serial_
+# crash_month
+# crash_day
+# crash_year
+# week_day_code
+# crash_hour
+# county_code
+# city_section_id
+# urban_area_code
+# functional_class_code
+# nhs_flag
+# highway_number
+# highway_suffix
+# roadway_number
+# highway_component
+# mileage_type
+# connection_number
+# linear_reference_system_lrs
+# latitude_degrees
+# latitude_minutes
+# latitude_seconds
+# longitude_degrees
+# longitude_minutes
+# longitude_seconds
+# special_jurisdiction
+# jurisdiction_group
+# street_number
+# nearest_intersecting_street_number
+# intersection_sequence_number
+# distance_from_intersection
+# direction_from_intersection
+# milepoint
+# posted_speed_limit
+# road_character
+# off_roadway_flag
+# intersection_type
+# intersection_related_flag
+# roundabout_flag
+# driveway_related_flag
+# number_of_lanes
+# number_of_turning_legs
+# median_type
+# impact_location
+# crash_type
+# collision_type
+# crash_severity
+# weather_condition
+# road_surface_condition
+# light_condition
+# traffic_control_device_tcd
+# tcd_functional_flag
+# investigating_agency
+# crash_level_event_1_code
+# crash_level_event_2_code
+# crash_level_event_3_code
+# crash_level_cause_1_code
+# crash_level_cause_2_code
+# crash_level_cause_3_code
+# school_zone_indicator
+# work_zone_indicator
+# alcoholinvolved_flag
+# drugs_involved_flag
+# speed_involved_flag
+# crash_level_hit__run_flag
+# population_range_code
+# road_control
+# route_type
+# route_number
+# region_id
+# district_id
+# segment_marker_id
+# segment_point_lrs_measure
+# unlocatable_flag
+# total_vehicle_count
+# total_fatality_count
+# total_serious_injury_inja_count
+# total_moderate_injury_injb_count
+# total_minor_injury_injc_count
+# total_nonfatal_injury_count
+# total_count_of_uninjured_children_age_0004
+# total_count_of_uninjured_persons
+# total_pedestrian_count
+# total_pedestrian_fatality_count
+# total_pedestrian_nonfatal_injury_count
+# total_pedalcyclist_count
+# total_pedalcyclist_fatality_count
+# total_pedalcyclist_nonfatal_injury_count
+# total_unknown_nonmotorist_count
+# total_unknown_nonmotorist_fatality_count
+# total_unknown_nonmotorist_injury_count
+# total_vehicle_occupant_count
+# total_count_of_persons_involved
+# total_quantity_of_persons_using_safety_equipment_
+# total_quantity_of_persons_not_using_safety_equipment
+# total_quantity_of_persons_safety_equipment_use_unknown
+# vehicle_ownership_code
+# vehicle_special_use_code
+# vehicle_type_code
+# emergency_use_flag
+# number_of_trailers
+# vehicle_movement_code
+# vehicle_travel_direction_from
+# vehicle_travel_direction_to
+# vehicle_action_code
+# vehicle_cause_1_code
+# vehicle_cause_2_code
+# vehicle_cause_3_code
+# vehicle_event_1_code
+# vehicle_event_2_code
+# vehicle_event_3_code
+# vehicle_exceeded_posted_speed_flag
+# vehicle_hit__run_flag
+# safety_equipment_used_quantity
+# safety_equipment_unused_quantity
+# safety_equipment_use_unknown_quantity
+# vehicle_occupant_count
+# vehicle_striking_flag
+# participant_type_code
+# participant_hit__run_flag
+# public_employee_flag
+# sex
+# age
+# driver_license_status
+# driver_residence
+# injury_severity
+# participant_safety_equipment_use_code
+# airbag_deployment
+# nonmotorist_movement_code
+# nonmotorist_travel_direction_from
+# nonmotorist_travel_direction_to
+# nonmotorist_location
+# participant_action
+# participant_error_1_code
+# participant_error_2_code
+# participant_error_3_code
+# participant_cause_1_code
+# participant_cause_2_code
+# participant_cause_3_code
+# participant_event_1_code
+# participant_event_2_code
+# participant_event_3_code
+# bac_test_results_code
+# alcohol_use_reported
+# drug_use_reported
+# participant_striker_flag
+
 require 'csv'
 require 'pathname'
 
@@ -12,17 +165,57 @@ def to_decimal(row, type)
   flip * (degrees.abs + (minutes / 60.0) + (seconds/3600.0))
 end
 
-out_headers = [:id, :vehicles, :pedestrians, :cyclist, :fatalities, :injuries, :date, :lat, :lon]
+out_headers = [
+  :id,
+  :vehicles,
+  :pedestrians,
+  :cyclist,
+  :fatalities,
+  :injuries,
+  :date,
+  :lat,
+  :lon,
+  :geom,
+  :fatality,
+  :serious_injury_inja,
+  :moderate_injury_injb,
+  :minor_injury_injc,
+  :nonfatal_injury,
+  :uninjured_children_age_0004,
+  :uninjured_persons,
+  :pedestrian,
+  :pedestrian_fatality,
+  :pedestrian_nonfatal_injury,
+  :pedalcyclist,
+  :pedalcyclist_fatality,
+  :pedalcyclist_nonfatal_injury,
+  :unknown_nonmotorist,
+  :unknown_nonmotorist_fatality,
+  :unknown_nonmotorist_injury,
+  :vehicle_occupant,
+  :persons_involved,
+  :persons_using_safety_equipment,
+  :persons_not_using_safety_equipment,
+  :persons_safety_equipment_use_unknown
+]
+
 in_headers  = CSV.read('meta/headers.csv').first
 out_file    = CSV.open('crashes.csv', 'w', :headers => out_headers, :write_headers => true)
 
-Pathname.glob('raw/*.txt').each do |file|
+Pathname.glob('raw/*.txt').each_with_index do |file, i|
+  next if i > 1
+
   rows = CSV.read(file,
     :headers => in_headers,
     :header_converters => :symbol).select { |row| row[:record_type].to_i == 1 }
 
+  puts rows.first.headers if i == 0
+
   rows.each do |row|
     row[:crash_hour] = '00' if row[:crash_hour].to_i > 24
+    lat = to_decimal(row, :lat)
+    lon = to_decimal(row, :lon)
+
 
     out_file << [
       row[:crash_id].strip,
@@ -32,8 +225,30 @@ Pathname.glob('raw/*.txt').each do |file|
       row[:total_fatality_count],
       row[:total_nonfatal_injury_count],
       "#{row[:crash_month].to_i}/#{row[:crash_day].to_i}/#{row[:crash_year].to_i} #{row[:crash_hour].to_i}:00",
-      to_decimal(row, :lat),
-      to_decimal(row, :long)
+      lat,
+      lon,
+      "SRID=4326;POINT(#{lon}, #{lat})",
+      row[:total_fatality_count],
+      row[:total_serious_injury_inja_count],
+      row[:total_moderate_injury_injb_count],
+      row[:total_minor_injury_injc_count],
+      row[:total_nonfatal_injury_count],
+      row[:total_count_of_uninjured_children_age_0004],
+      row[:total_count_of_uninjured_persons],
+      row[:total_pedestrian_count],
+      row[:total_pedestrian_fatality_count],
+      row[:total_pedestrian_nonfatal_injury_count],
+      row[:total_pedalcyclist_count],
+      row[:total_pedalcyclist_fatality_count],
+      row[:total_pedalcyclist_nonfatal_injury_count],
+      row[:total_unknown_nonmotorist_count],
+      row[:total_unknown_nonmotorist_fatality_count],
+      row[:total_unknown_nonmotorist_injury_count],
+      row[:total_vehicle_occupant_count],
+      row[:total_count_of_persons_involved],
+      row[:total_quantity_of_persons_using_safety_equipment_],
+      row[:total_quantity_of_persons_not_using_safety_equipment],
+      row[:total_quantity_of_persons_safety_equipment_use_unknown]
     ]
   end
 end
