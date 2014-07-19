@@ -1,0 +1,20 @@
+#!/bin/sh
+
+DB=portland
+TABLE=crashes
+
+
+echo "DROP TABLE IF EXISTS $TABLE;" > meta/schema.sql
+csvsql --no-constraints -i postgresql --table $TABLE crashes.csv >> meta/schema.sql
+echo "ALTER TABLE $TABLE ADD PRIMARY KEY (crash_id);" >> meta/schema.sql
+
+# Fix column types
+sed -i "" -e 's/TIME WITHOUT TIME ZONE/INTEGER/g' meta/schema.sql
+
+
+psql -f meta/schema.sql -d $DB
+psql -c "COPY $TABLE FROM '$PWD/crashes.csv' DELIMITER AS ',' CSV HEADER  NULL AS '-'" -d $DB
+
+psql -c "ALTER TABLE $TABLE ADD COLUMN geom geometry(Point,4326);" -d $DB
+psql -c "UPDATE $TABLE SET geom = ST_SetSRID(ST_MakePoint(lon,lat),4326);" -d $DB
+psql -c "CREATE INDEX geom_idx ON $TABLE USING gist(geom);" -d $DB
