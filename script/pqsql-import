@@ -32,4 +32,10 @@ for db in raw/*.mdb; do \
 done
 
 
-psql -c "alter table crash add column geom geometry(Point,4326);" -d $database
+psql -f sql/decimal-degrees.sql -d $database
+psql -c "alter table crash add column lat double precision, add column lon \
+         double precision, add column geom geometry(Point, 4326)" -d $database
+
+psql -c "update crash set lat = decimal_degrees(lat_deg_no, lat_minute_no, lat_sec_no), lon = decimal_degrees(longtd_deg_no, longtd_minute_no, longtd_sec_no)" -d $database
+psql -c "update crash set geom = ST_SetSRID(ST_MakePoint(lon,lat),4326);" -d $database
+psql -c "create index geom_idx ON crash using gist(geom);" -d $database
