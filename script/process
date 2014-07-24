@@ -155,7 +155,16 @@
 
 require 'csv'
 require 'pathname'
+require 'sqlite3'
 
+db = SQLite3::Database.new "meta/codes.db"
+
+# Public: Convert lat, lon degrees, minutes, seconds to decimal degrees
+#
+# row - {CSV::Row}
+# type - one of :lat or :lon
+#
+# Returns a {Float}
 def to_decimal(row, type)
   degrees = (type == :lat ? row[:latitude_degrees] : row[:longitude_degrees]).to_f
   minutes = (type == :lat ? row[:latitude_minutes] : row[:longitude_minutes]).to_f
@@ -165,92 +174,66 @@ def to_decimal(row, type)
   flip * (degrees.abs + (minutes / 60.0) + (seconds/3600.0))
 end
 
-out_headers = [
-  :id,
-  :vehicles,
-  :pedestrians,
-  :cyclist,
-  :fatalities,
-  :injuries,
-  :date,
-  :lat,
-  :lon,
-  :geom,
-  :fatality,
-  :serious_injury_inja,
-  :moderate_injury_injb,
-  :minor_injury_injc,
-  :nonfatal_injury,
-  :uninjured_children_age_0004,
-  :uninjured_persons,
-  :pedestrian,
-  :pedestrian_fatality,
-  :pedestrian_nonfatal_injury,
-  :pedalcyclist,
-  :pedalcyclist_fatality,
-  :pedalcyclist_nonfatal_injury,
-  :unknown_nonmotorist,
-  :unknown_nonmotorist_fatality,
-  :unknown_nonmotorist_injury,
-  :vehicle_occupant,
-  :persons_involved,
-  :persons_using_safety_equipment,
-  :persons_not_using_safety_equipment,
-  :persons_safety_equipment_use_unknown
-]
+# Create a custom header converter to clean up the headers a little.
+# They are needlesly verbose.
+CSV::HeaderConverters[:concise] = lambda do |h|
+  h.encode(CSV::ConverterEncoding).downcase.gsub(/\s+/, "_").
+            gsub(/\W+/, "").
+            gsub(/\_count$/, '').
+            gsub(%r{^quantity_of_|count_of_}, '').to_sym
+end
 
-in_headers  = CSV.read('meta/headers.csv').first
-out_file    = CSV.open('crashes.csv', 'w', :headers => out_headers, :write_headers => true)
-
-Pathname.glob('raw/*.txt').each_with_index do |file, i|
-  next if i > 1
-
-  rows = CSV.read(file,
-    :headers => in_headers,
-    :header_converters => :symbol).select { |row| row[:record_type].to_i == 1 }
-
-  puts rows.first.headers if i == 0
-
-  rows.each do |row|
-    row[:crash_hour] = '00' if row[:crash_hour].to_i > 24
-    lat = to_decimal(row, :lat)
-    lon = to_decimal(row, :lon)
-
-
-    out_file << [
-      row[:crash_id].strip,
-      row[:total_vehicle_count],
-      row[:total_pedestrian_count],
-      row[:total_pedalcyclist_count],
-      row[:total_fatality_count],
-      row[:total_nonfatal_injury_count],
-      "#{row[:crash_month].to_i}/#{row[:crash_day].to_i}/#{row[:crash_year].to_i} #{row[:crash_hour].to_i}:00",
-      lat,
-      lon,
-      "SRID=4326;POINT(#{lon}, #{lat})",
-      row[:total_fatality_count],
-      row[:total_serious_injury_inja_count],
-      row[:total_moderate_injury_injb_count],
-      row[:total_minor_injury_injc_count],
-      row[:total_nonfatal_injury_count],
-      row[:total_count_of_uninjured_children_age_0004],
-      row[:total_count_of_uninjured_persons],
-      row[:total_pedestrian_count],
-      row[:total_pedestrian_fatality_count],
-      row[:total_pedestrian_nonfatal_injury_count],
-      row[:total_pedalcyclist_count],
-      row[:total_pedalcyclist_fatality_count],
-      row[:total_pedalcyclist_nonfatal_injury_count],
-      row[:total_unknown_nonmotorist_count],
-      row[:total_unknown_nonmotorist_fatality_count],
-      row[:total_unknown_nonmotorist_injury_count],
-      row[:total_vehicle_occupant_count],
-      row[:total_count_of_persons_involved],
-      row[:total_quantity_of_persons_using_safety_equipment_],
-      row[:total_quantity_of_persons_not_using_safety_equipment],
-      row[:total_quantity_of_persons_safety_equipment_use_unknown]
-    ]
+# Strip values and use \N for null values
+CSV::Converters[:strip] = lambda do |val, h|
+  if val
+    val = val.encode(CSV::ConverterEncoding).strip
+    val.empty? ? "-" : val
+  else
+    "-"
   end
 end
 
-out_file.close
+remove_columns = [
+  :crash_month,
+  :crash_day,
+  :crash_year,
+  :week_day_code,
+  :crash_hour,
+  :county_code,
+  :latitude_degrees,
+  :latitude_minutes,
+  :latitude_seconds,
+  :longitude_degrees,
+  :longitude_minutes,
+  :longitude_seconds
+]
+
+data        = ""
+out_file    = nil
+in_headers  = CSV.read('meta/headers.csv').first.concat([
+  'lat',
+  'lon',
+  'date'
+])
+
+Pathname.glob('raw/*.txt').each_with_index do |file, i|
+  # next if i > 1
+  data += file.read
+end
+
+rows = CSV.parse(data, :headers => in_headers, :header_converters => [:concise], :converters => [:strip, :numeric])
+rows.delete_if do |row|
+  row[:record_type].to_i != 1
+end
+
+rows.each do |row|
+  row[:crash_hour] = '00' if row[:crash_hour].to_i > 24
+  lat = to_decimal(row, :lat)
+  lon = to_decimal(row, :lon)
+  row[:lat] = lat
+  row[:lon] = lon
+  row[:date] = "#{row[:crash_month].to_i}/#{row[:crash_day].to_i}/#{row[:crash_year].to_i} #{row[:crash_hour].to_i}:00"
+end
+
+remove_columns.each { |h| rows.delete(h) }
+File.write('crashes.csv', rows.to_csv)
