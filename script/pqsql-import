@@ -30,3 +30,6 @@ for db in raw/*.mdb; do \
     mdb-export -I postgres -q \' $db $table | sed -E 's/\"([a-zA-Z0-9_]+)\"/\1/g' | psql -d $database
   done
 done
+
+
+psql -c "alter table crash add column geom geometry(Point,4326);" -d $database
