@@ -4,27 +4,29 @@ database=crashes
 schema_source="raw/2012-n.mdb"
 export_dir="export"
 
+# Drop and recreate the database
 dropdb --if-exists --interactive $database
 createdb $database
 psql -c "create extension postgis" -d $database
 
-mdb-schema $schema_source postgres > schema.sql
+# Create and load the schema, removing all of the quoting that mdb-schema forces
+mdb-schema $schema_source postgres | sed -E 's/\"([a-zA-Z0-9_]+)\"/\1/g' > schema.sql
 sed -i "" -e 's/BOOL NOT NULL/SMALLINT/g' schema.sql
-sed -i "" -e 's/BOOL NOT NULL/SMALLINT/g' schema.sql
-
 psql -f schema.sql -d $database
 
+# Load the meta tables from a single file.  These are identical across all of the
+# access files, so we only load them once.
 for table in $(mdb-tables $schema_source); do \
   if [ "$table" == "CRASH" ] || [ "$table" == "CRASH_KEY_XREF" ] || [ "$table" == "PARTIC" ] || [ "$table" == "VHCL" ]; then \
     echo $table
   else
-    mdb-export -I postgres -q \' $schema_source $table | psql -d $database
+    mdb-export -I postgres -q \' $schema_source $table | sed -E 's/\"([a-zA-Z0-9_]+)\"/\1/g' | psql -d $database
   fi
 done
 
+# Import all of the individual crash data including vehicles and participants
 for db in raw/*.mdb; do \
-  mdb-export -I postgres -q \' $db CRASH | psql -d $database
-  mdb-export -I postgres -q \' $db CRASH_KEY_XREF | psql -d $database
-  mdb-export -I postgres -q \' $db PARTIC | psql -d $database
-  mdb-export -I postgres -q \' $db VHCL | psql -d $database
+  for table in CRASH CRASH_KEY_XREF PATRIC VHCL; do \
+    mdb-export -I postgres -q \' $db $table | sed -E 's/\"([a-zA-Z0-9_]+)\"/\1/g' | psql -d $database
+  done
 done
