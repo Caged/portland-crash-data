@@ -1,9 +1,0 @@
-#!/bin/sh
-
-out="meta/streets.csv"
-echo "city_section_id, city_section_name, intersecting_street_name,intersecting_street_id,street_name,street_id" > $out
-for file in meta/*.mdb; do \
-  echo "SELECT CITY_SECT_ID,CITY_SECT_NM,ISECT_AGY_ST_NO,ISECT_ST_FULL_NM,AGY_ST_NO, ST_FULL_NM FROM CRASH" | mdb-sql -HF -d, -p -i stdin $file >> $out
-done
-
-#echo "SELECT ISECT_AGY_ST_NO,ISECT_ST_FULL_NM,AGY_ST_NO, ST_FULL_NM FROM CRASH" | mdb-sql -d, -p -i stdin meta/bridges.mdb
