@@ -1,19 +1,31 @@
 #!/bin/sh
 
-DB=portland
-TABLE=crashes
+DB=crashes
+schema_source="raw/2012-n.mdb"
+export_dir="export"
 
+mdb-schema  $schema_source postgres > "schema.sql"
 
-echo "DROP TABLE IF EXISTS $TABLE;" > meta/schema.sql
-csvsql --no-constraints -i postgresql --table $TABLE crashes.csv >> meta/schema.sql
-echo "ALTER TABLE $TABLE ADD PRIMARY KEY (crash_id);" >> meta/schema.sql
+for table in $(mdb-tables $schema_source); do \
+  if [ "$table" != "CRASH" ] || [ "$table" != "CRASH_KEY_XREF" ] || [ "$table" != "PARTIC" ] || [ "$table" != "VHCL" ]; then \
+    mdb-export -S -I sqlite $schema_source $table > "export/$(tr '[:upper:]' '[:lower:]' <<< $table).sql"
+  fi
+done
 
-# Fix column types
-sed -i "" -e 's/TIME WITHOUT TIME ZONE/INTEGER/g' meta/schema.sql
+for db in raw/*.mdb; do \
+  echo $db;
+done
 
-psql -f meta/schema.sql -d $DB
-psql -c "COPY $TABLE FROM '$PWD/crashes.csv' DELIMITER AS ',' CSV HEADER  NULL AS '-'" -d $DB
-
-psql -c "ALTER TABLE $TABLE ADD COLUMN geom geometry(Point,4326);" -d $DB
-psql -c "UPDATE $TABLE SET geom = ST_SetSRID(ST_MakePoint(lon,lat),4326);" -d $DB
-psql -c "CREATE INDEX geom_idx ON $TABLE USING gist(geom);" -d $DB
+# echo "DROP TABLE IF EXISTS $TABLE;" > meta/schema.sql
+# csvsql --no-constraints -i postgresql --table $TABLE crashes.csv >> meta/schema.sql
+# echo "ALTER TABLE $TABLE ADD PRIMARY KEY (crash_id);" >> meta/schema.sql
+#
+# # Fix column types
+# sed -i "" -e 's/TIME WITHOUT TIME ZONE/INTEGER/g' meta/schema.sql
+#
+# psql -f meta/schema.sql -d $DB
+# psql -c "COPY $TABLE FROM '$PWD/crashes.csv' DELIMITER AS ',' CSV HEADER  NULL AS '-'" -d $DB
+#
+# psql -c "ALTER TABLE $TABLE ADD COLUMN geom geometry(Point,4326);" -d $DB
+# psql -c "UPDATE $TABLE SET geom = ST_SetSRID(ST_MakePoint(lon,lat),4326);" -d $DB
+# psql -c "CREATE INDEX geom_idx ON $TABLE USING gist(geom);" -d $DB
