@@ -32,6 +32,8 @@ for db in raw/*.mdb; do \
 done
 
 
+# Add our decimal degrees function for converting lat,lon degree/minutes/seconds to
+# decimal degrees
 psql -f sql/decimal-degrees.sql -d $database
 psql -c "alter table crash add column lat double precision, add column lon \
          double precision, add column geom geometry(Point, 4326)" -d $database
