@@ -1,19 +1,43 @@
 #!/bin/sh
 
-DB=portland
-TABLE=crashes
+database=crashes
+schema_source="raw/2012-n.mdb"
+export_dir="export"
+
+# Drop and recreate the database
+dropdb --if-exists --interactive $database
+createdb $database
+psql -c "create extension postgis" -d $database
+
+# Create and load the schema, removing all of the quoting that mdb-schema forces
+mdb-schema $schema_source postgres | sed -E 's/\"([a-zA-Z0-9_]+)\"/\1/g' > schema.sql
+sed -i "" -e 's/BOOL NOT NULL/SMALLINT/g' schema.sql
+psql -f schema.sql -d $database
+
+# Load the meta tables from a single file.  These are identical across all of the
+# access files, so we only load them once.
+for table in $(mdb-tables $schema_source); do \
+  if [ "$table" == "CRASH" ] || [ "$table" == "CRASH_KEY_XREF" ] || [ "$table" == "PARTIC" ] || [ "$table" == "VHCL" ]; then \
+    echo $table
+  else
+    mdb-export -I postgres -q \' $schema_source $table | sed -E 's/\"([a-zA-Z0-9_]+)\"/\1/g' | psql -d $database
+  fi
+done
+
+# Import all of the individual crash data including vehicles and participants
+for db in raw/*.mdb; do \
+  for table in CRASH CRASH_KEY_XREF PATRIC VHCL; do \
+    mdb-export -I postgres -q \' $db $table | sed -E 's/\"([a-zA-Z0-9_]+)\"/\1/g' | psql -d $database
+  done
+done
 
 
-echo "DROP TABLE IF EXISTS $TABLE;" > meta/schema.sql
-csvsql --no-constraints -i postgresql --table $TABLE crashes.csv >> meta/schema.sql
-echo "ALTER TABLE $TABLE ADD PRIMARY KEY (crash_id);" >> meta/schema.sql
+# Add our decimal degrees function for converting lat,lon degree/minutes/seconds to
+# decimal degrees
+psql -f sql/decimal-degrees.sql -d $database
+psql -c "alter table crash add column lat double precision, add column lon \
+         double precision, add column geom geometry(Point, 4326)" -d $database
 
-# Fix column types
-sed -i "" -e 's/TIME WITHOUT TIME ZONE/INTEGER/g' meta/schema.sql
-
-psql -f meta/schema.sql -d $DB
-psql -c "COPY $TABLE FROM '$PWD/crashes.csv' DELIMITER AS ',' CSV HEADER  NULL AS '-'" -d $DB
-
-psql -c "ALTER TABLE $TABLE ADD COLUMN geom geometry(Point,4326);" -d $DB
-psql -c "UPDATE $TABLE SET geom = ST_SetSRID(ST_MakePoint(lon,lat),4326);" -d $DB
-psql -c "CREATE INDEX geom_idx ON $TABLE USING gist(geom);" -d $DB
+psql -c "update crash set lat = decimal_degrees(lat_deg_no, lat_minute_no, lat_sec_no), lon = decimal_degrees(longtd_deg_no, longtd_minute_no, longtd_sec_no)" -d $database
+psql -c "update crash set geom = ST_SetSRID(ST_MakePoint(lon,lat),4326);" -d $database
+psql -c "create index geom_idx ON crash using gist(geom);" -d $database
