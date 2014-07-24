@@ -1,4 +1,4 @@
-city_section_id, city_section_name, intersecting_street_name,intersecting_street_id,street_name,street_id
+city_section_id,city_section_name,intersecting_street_name,intersecting_street_id,street_name,street_id
 250,Portland Bridges,09430,SB EX FREMONT BR,09010,FREMONT BRIDGE
 250,Portland Bridges,09574,NB EX FREMONT BR,09010,FREMONT BRIDGE
 250,Portland Bridges,05007,7TH AVE,09005,ROSS ISLAND BRIDGE

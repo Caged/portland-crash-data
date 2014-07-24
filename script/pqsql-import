@@ -11,7 +11,6 @@ echo "ALTER TABLE $TABLE ADD PRIMARY KEY (crash_id);" >> meta/schema.sql
 # Fix column types
 sed -i "" -e 's/TIME WITHOUT TIME ZONE/INTEGER/g' meta/schema.sql
 
-
 psql -f meta/schema.sql -d $DB
 psql -c "COPY $TABLE FROM '$PWD/crashes.csv' DELIMITER AS ',' CSV HEADER  NULL AS '-'" -d $DB
 
