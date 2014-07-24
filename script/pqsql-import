@@ -1,31 +1,30 @@
 #!/bin/sh
 
-DB=crashes
+database=crashes
 schema_source="raw/2012-n.mdb"
 export_dir="export"
 
-mdb-schema  $schema_source postgres > "schema.sql"
+dropdb --if-exists --interactive $database
+createdb $database
+psql -c "create extension postgis" -d $database
+
+mdb-schema $schema_source postgres > schema.sql
+sed -i "" -e 's/BOOL NOT NULL/SMALLINT/g' schema.sql
+sed -i "" -e 's/BOOL NOT NULL/SMALLINT/g' schema.sql
+
+psql -f schema.sql -d $database
 
 for table in $(mdb-tables $schema_source); do \
-  if [ "$table" != "CRASH" ] || [ "$table" != "CRASH_KEY_XREF" ] || [ "$table" != "PARTIC" ] || [ "$table" != "VHCL" ]; then \
-    mdb-export -S -I sqlite $schema_source $table > "export/$(tr '[:upper:]' '[:lower:]' <<< $table).sql"
+  if [ "$table" == "CRASH" ] || [ "$table" == "CRASH_KEY_XREF" ] || [ "$table" == "PARTIC" ] || [ "$table" == "VHCL" ]; then \
+    echo $table
+  else
+    mdb-export -I postgres -q \' $schema_source $table | psql -d $database
   fi
 done
 
 for db in raw/*.mdb; do \
-  echo $db;
+  mdb-export -I postgres -q \' $db CRASH | psql -d $database
+  mdb-export -I postgres -q \' $db CRASH_KEY_XREF | psql -d $database
+  mdb-export -I postgres -q \' $db PARTIC | psql -d $database
+  mdb-export -I postgres -q \' $db VHCL | psql -d $database
 done
-
-# echo "DROP TABLE IF EXISTS $TABLE;" > meta/schema.sql
-# csvsql --no-constraints -i postgresql --table $TABLE crashes.csv >> meta/schema.sql
-# echo "ALTER TABLE $TABLE ADD PRIMARY KEY (crash_id);" >> meta/schema.sql
-#
-# # Fix column types
-# sed -i "" -e 's/TIME WITHOUT TIME ZONE/INTEGER/g' meta/schema.sql
-#
-# psql -f meta/schema.sql -d $DB
-# psql -c "COPY $TABLE FROM '$PWD/crashes.csv' DELIMITER AS ',' CSV HEADER  NULL AS '-'" -d $DB
-#
-# psql -c "ALTER TABLE $TABLE ADD COLUMN geom geometry(Point,4326);" -d $DB
-# psql -c "UPDATE $TABLE SET geom = ST_SetSRID(ST_MakePoint(lon,lat),4326);" -d $DB
-# psql -c "CREATE INDEX geom_idx ON $TABLE USING gist(geom);" -d $DB
