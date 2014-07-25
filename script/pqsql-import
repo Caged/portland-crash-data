@@ -26,7 +26,7 @@ done
 
 # Import all of the individual crash data including vehicles and participants
 for db in raw/*.mdb; do \
-  for table in CRASH CRASH_KEY_XREF PATRIC VHCL; do \
+  for table in crash crash_key_xref partic vhcl; do \
     mdb-export -I postgres -q \' $db $table | sed -E 's/\"([a-zA-Z0-9_]+)\"/\1/g' | psql -d $database
   done
 done
