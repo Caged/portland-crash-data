@@ -1,0 +1,19 @@
+<section class="row">
+  <header>
+    Crashes
+  </header>
+  <table class="data">
+    <% @crashes.each do |crash| %>
+      <tr>
+        <td><%= crash.crash_dt.strftime('%F') %></td>
+        <td><a href="/crash/<%= crash.id %>"><%= crash.crash_cause_1_short_desc %></a></td>
+        <td>
+          <% crash.participants.each do |person| %>
+            <% vh = person.vehicle %>
+            <%= vh.ownership %> <%= vh.kind %> <br />
+          <% end %>
+        </td>
+      </tr>
+    <% end %>
+  </table>
+</section>

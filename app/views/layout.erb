@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Preview</title>
+    <style media="screen">
+      body {
+        margin: 0;
+        font-size: 12px;
+        font-family: "Helvetica"
+      }
+
+      section {
+        margin: 20px;
+      }
+
+      header {
+        padding: 15px;
+        background: #eee;
+        font-weight: bold;
+      }
+
+      .data {
+        border-collapse: collapse;
+      }
+
+      .data td {
+        border: 1px solid #eee;
+        padding: 10px;
+      }
+    </style>
+  </head>
+  <body>
+    <%= yield %>
+  </body>
+</html>
