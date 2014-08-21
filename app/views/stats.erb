@@ -1,0 +1,13 @@
+<div class="container">
+  <%= @vehicles.count %><br />
+
+  <h3>Movements</h3>
+  <% @stats[:movements].each do |key, val| %>
+    <%= key %>: <%= val.count %><br />
+  <% end %>
+
+  <h3>Causes</h3>
+  <% @stats[:causes].each do |key, val| %>
+    <%= key %>: <%= val.count %><br />
+  <% end %>
+</div>
