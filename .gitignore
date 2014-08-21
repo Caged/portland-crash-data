@@ -1,1 +1,3 @@
-meta/*.mdb
+code-manual.pdf
+*.log
+keys.txt

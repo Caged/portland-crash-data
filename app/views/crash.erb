@@ -1,0 +1,16 @@
+<h1><%= @crash.participants.size %></h1>
+
+<h2>Participants<h2>
+<ul>
+<% @crash.participants.each do |person| %>
+  <% vehicle = person.vehicle %>
+  <li>
+    <h3><%= person.id %></h3>
+    <table>
+      <tr>
+        <td><%= vehicle.ownership %> <%= vehicle.kind %> </td>
+      </tr>
+    </table>
+  </li>
+<% end %>
+</ul>

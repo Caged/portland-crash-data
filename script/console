@@ -1,0 +1,3 @@
+#!/bin/sh
+
+irb -r $PWD/app/env.rb -r $PWD/app/models.rb

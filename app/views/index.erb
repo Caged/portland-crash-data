@@ -1,0 +1,78 @@
+<div class="container">
+  <div class="grid overview">
+    <div class="col">
+      <%= @crashes.cyclist.count %> cyclist accidents
+      resulting in <%= @crashes.cyclist.sum(:tot_inj_cnt) %> injuries total,
+      <%= @crashes.cyclist.sum(:tot_pedcycl_inj_cnt) %> to cyclist,
+      <span class="major"><%= @crashes.cyclist.sum(:tot_inj_lvl_a_cnt) %></span> major injuries,
+      <span class="moderate"><%= @crashes.cyclist.sum(:tot_inj_lvl_b_cnt) %></span> moderate injuries,
+      <span class="minor"><%= @crashes.cyclist.sum(:tot_inj_lvl_c_cnt) %></span> minor injuries,
+      and <span class="fat"><%= @crashes.cyclist.sum(:tot_pedcycl_fatal_cnt) %></span> fatalities
+    </div>
+
+    <div class="col">
+      <%= @crashes.pedestrians.count %> pedestrian accidents
+      resulting in <%= @crashes.pedestrians.sum(:tot_inj_cnt) %> injuries total,
+      <%= @crashes.pedestrians.sum(:tot_ped_inj_cnt) %> to pedestrians,
+      <span class="major"><%= @crashes.pedestrians.sum(:tot_inj_lvl_a_cnt) %></span> major injuries,
+      <span class="moderate"><%= @crashes.pedestrians.sum(:tot_inj_lvl_b_cnt) %></span> moderate injuries,
+      <span class="minor"><%= @crashes.pedestrians.sum(:tot_inj_lvl_c_cnt) %></span> minor injuries,
+      and <span class="fat"><%= @crashes.pedestrians.sum(:tot_ped_fatal_cnt) %></span> fatalities
+    </div>
+  </div>
+</div>
+
+<section class="row">
+  <header>
+    Crashes
+  </header>
+  <table class="data">
+    <thead>
+      <tr>
+        <th>Date</th>
+        <th>Causes</th>
+        <th>Movement</th>
+        <th>Action</th>
+        <th>Errors</th>
+        <th>Pedestrians</th>
+        <th>Cyclist</th>
+      </tr>
+    </thead>
+    <% @crashes.each do |crash| %>
+      <tr>
+        <td><%= crash.crash_dt.strftime('%F') %></td>
+
+        <td>
+          <% crash.participants.each do |person| %>
+            <% person.causes.each do |cause| %>
+              <%= cause.description %></br />
+            <% end %>
+          <% end %>
+        </td>
+
+        <td>
+          <% crash.participants.each do |person| %>
+            <% vh = person.vehicle %>
+            <%= vh.movement.mvmnt_long_desc %><br />
+          <% end %>
+        </td>
+
+        <td>
+          <% crash.participants.each do |person| %>
+            <% vh = person.vehicle %>
+            <%= vh.action.description %><br />
+          <% end %>
+        </td>
+
+        <td>
+          <% crash.errors.each do |err| %>
+            <%= err.id %>: <%= err.description %></br />
+          <% end %>
+        </td>
+
+        <td><%= crash.tot_ped_cnt %></td>
+        <td><%= crash.tot_pedcycl_cnt %></td>
+      </tr>
+    <% end %>
+  </table>
+</section>

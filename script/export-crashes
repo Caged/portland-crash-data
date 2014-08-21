@@ -1,0 +1,41 @@
+#!/usr/bin/env ruby
+
+require './app/env'
+require './app/models'
+require 'csv'
+
+crashes = Crash.pedestrians_and_cyclist
+csv_out = CSV.generate do |csv|
+  csv << [
+    :date,
+    :pedestrians,
+    :cyclist,
+    :movements,
+    :errors,
+    :injuries,
+    :minor_injuries,
+    :moderate_injuries,
+    :major_injuries,
+    :fatalities,
+    :lat,
+    :lon
+  ]
+  crashes.each do |crash|
+    csv << [
+      crash.crash_dt.to_date,
+      crash.tot_ped_cnt,
+      crash.tot_pedcycl_cnt,
+      crash.vehicles.map(&:mvmnt_cd).join(' '),
+      crash.errors.map(&:id).join(' '),
+      crash.injuries,
+      crash.minor_injuries,
+      crash.moderate_injuries,
+      crash.major_injuries,
+      crash.fatalities,
+      crash.lat,
+      crash.lon
+    ]
+  end
+end
+
+puts csv_out
