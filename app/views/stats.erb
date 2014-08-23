@@ -1,13 +1,141 @@
 <div class="container">
-  <%= @vehicles.count %><br />
-
-  <h3>Movements</h3>
-  <% @stats[:movements].each do |key, val| %>
-    <%= key %>: <%= val.count %><br />
-  <% end %>
-
-  <h3>Causes</h3>
-  <% @stats[:causes].each do |key, val| %>
-    <%= key %>: <%= val.count %><br />
-  <% end %>
+  <div class="js-movement"></div>
+  <div class="causes js-causes"></div>
 </div>
+<style media="screen">
+  .causes {
+    border: 1px solid #ccc;
+    display: inline-block;
+    margin: 20px;
+    border-radius: 3px;
+  }
+
+  .domain {
+    display: none;
+  }
+
+  .title {
+    font-weight: bold;
+  }
+
+  .val {
+    fill: orangered;
+  }
+
+  .credit, .date {
+    font-size: 10px;
+    fill: #999;
+    text-anchor: end;
+  }
+
+  .date {
+    text-anchor: start;
+  }
+
+  rect {
+    fill: orangered;
+  }
+
+  .x text {
+    fill: #a00;
+  }
+
+  .tick line {
+    stroke: #ddd;
+    shape-rendering: crispedges;
+    stroke-width: 0.5;
+  }
+</style>
+<script charset="utf-8">
+  d3.json('/stats_data', function(err, data) {
+    var margin = { top: 50, left: 200, bottom: 25, right: 20 },
+        width = 600 - margin.left - margin.right,
+        height = 400 - margin.top - margin.bottom,
+        movement = data.cyclist.movement,
+        causes   = data.cyclist.causes
+
+    causes = causes.filter(function(c) { return c.name != 'No cause associated at this level' })
+    causes.sort(function(a, b) { return d3.ascending(a.count, b.count) })
+    var total = d3.sum(causes, function(d) { return d.count })
+
+    causes.forEach(function(c) {
+      c.percent = Math.floor((c.count / total) * 100)
+    })
+
+    causes = causes.filter(function(c) { return c.percent >= 1 })
+    causes.unshift({
+      name: 'Other',
+      percent: 100 - d3.sum(causes, function(d) { return d.percent })
+    })
+    var extent = d3.extent(causes, function(d) { return d.percent }),
+        min = extent[0],
+        max = extent[1]
+
+    var y = d3.scale.ordinal().domain(d3.range(causes.length)).rangeBands([height, 0], 0.2),
+        x = d3.scale.linear().domain([0, 100]).range([0, width])
+
+    var yax = d3.svg.axis()
+      .scale(y)
+      .orient('left')
+      .tickFormat(function(d) { return causes[d].name })
+
+    var xax = d3.svg.axis()
+      .orient('top')
+      .tickSize(height)
+      .tickFormat(function(d) {
+        return d === 0 || d === 100 ? d + '%' : d
+      })
+      .scale(x)
+
+    var vis = d3.select('.js-causes').append('svg')
+      .attr('width', width + margin.left + margin.right)
+      .attr('height', height + margin.top + margin.bottom)
+    .append('g')
+      .attr('transform', 'translate(' + margin.left + ',' + margin.top + ')')
+
+    vis.append('g')
+      .call(yax)
+
+    vis.append('g')
+      .attr('class', 'x')
+      .attr('transform', 'translate(0, ' + height + ')')
+      .call(xax)
+
+    var cause = vis.selectAll('.cause')
+      .data(causes)
+    .enter().append('g')
+      .attr('class', 'cause')
+      .attr('transform', function(d, i) {
+        return 'translate(0, ' + y(i) + ')'
+      })
+
+    cause.append('rect')
+      .attr('width', function(d) { return x(d.percent) })
+      .attr('height', y.rangeBand())
+
+    cause.append('text')
+      .attr('class', 'val')
+      .attr('x', function(d) { return x(d.percent) + 5 })
+      .attr('y', y.rangeBand() / 2 + 5)
+      .text(function(d) { return d.percent + '%' })
+
+    vis.append('text')
+      .attr('class', 'title')
+      .attr('y', -25)
+      .attr('x', -margin.left + 10)
+      .text('Portland, OR: 2013 vehicle and cyclist crashes')
+
+    vis.append('text')
+      .attr('class', 'credit')
+      .attr('y', height + 20)
+      .attr('x', width + 5)
+      .text('Source: Oregon Department of Transportation. Author: Justin Palmer, @Caged')
+
+    vis.append('text')
+      .attr('class', 'date')
+      .attr('y', height + 20)
+      .attr('x', -margin.left + 10)
+      .text('08/20/2014')
+
+  })
+</script>

@@ -54,7 +54,6 @@ class Vehicle < ActiveRecord::Base
   has_one :action,
     :foreign_key => :actn_cd,
     :primary_key => :actn_cd
-
 end
 
 class Movement < ActiveRecord::Base
