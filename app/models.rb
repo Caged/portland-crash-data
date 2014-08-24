@@ -3,7 +3,7 @@ class Crash < ActiveRecord::Base
   self.primary_key = :crash_id
   self.table_name = :crash
 
-  default_scope { order('crash_dt DESC') }
+  # default_scope { order('crash_dt DESC') }
 
   alias_attribute :injuries, :tot_inj_cnt
   alias_attribute :major_injuries, :tot_inj_lvl_a_cnt
@@ -21,6 +21,10 @@ class Crash < ActiveRecord::Base
   def errors
     participants.map(&:errors).flatten
   end
+
+  def events
+    CrashEvent.find([crash_evnt_1_cd, crash_evnt_2_cd, crash_evnt_3_cd].compact)
+  end
 end
 
 class Participant < ActiveRecord::Base
@@ -37,6 +41,10 @@ class Participant < ActiveRecord::Base
 
   def errors
     CrashError.find([partic_err_1_cd, partic_err_2_cd, partic_err_3_cd])
+  end
+
+  def events
+    CrashEvent.find([partic_evnt_1_cd, partic_evnt_2_cd, partic_evnt_3_cd].compact)
   end
 end
 
@@ -79,6 +87,7 @@ class Event < ActiveRecord::Base
   self.primary_key = :event_cd
   self.table_name  = :evnt
 
+  alias_attribute :description, :evnt_long_desc
 end
 
 class CrashError < ActiveRecord::Base
@@ -86,4 +95,11 @@ class CrashError < ActiveRecord::Base
   self.table_name  = :err
 
   alias_attribute :description, :crash_err_long_desc
+end
+
+class CrashEvent < ActiveRecord::Base
+  self.primary_key = :evnt_cd
+  self.table_name  = :evnt
+
+  alias_attribute :description, :evnt_long_desc
 end

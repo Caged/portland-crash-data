@@ -30,17 +30,20 @@
     <thead>
       <tr>
         <th>Date</th>
+        <th>Pedestrians</th>
+        <th>Cyclist</th>
         <th>Causes</th>
         <th>Movement</th>
         <th>Action</th>
         <th>Errors</th>
-        <th>Pedestrians</th>
-        <th>Cyclist</th>
+        <th>Intersection</th>
       </tr>
     </thead>
     <% @crashes.each do |crash| %>
       <tr>
         <td><%= crash.crash_dt.strftime('%F') %></td>
+        <td><%= crash.tot_ped_cnt %></td>
+        <td><%= crash.tot_pedcycl_cnt %></td>
 
         <td>
           <% crash.participants.each do |person| %>
@@ -70,8 +73,9 @@
           <% end %>
         </td>
 
-        <td><%= crash.tot_ped_cnt %></td>
-        <td><%= crash.tot_pedcycl_cnt %></td>
+        <td>
+          <%= crash.st_full_nm.strip %> &amp; <%= crash.isect_st_full_nm.strip %>
+        </td>
       </tr>
     <% end %>
   </table>
