@@ -1,0 +1,13 @@
+#!/usr/bin/env rscript
+
+library(data.table)
+
+crashes         <- read.csv(file="csv/crashes.csv", head = TRUE)
+
+crashes_cyclist <- subset(crashes, crash_typ_cd == '6')
+#crashes_2013    <- subset(crashes_cyclist, crash_yr_no == '2013')
+#crashes_2014    <- subset(crashes_cyclist, crash_yr_no == '2014')
+
+#dt[, length(contact[relpos == 0 & maxpos > 1]), by = contactGrp]
+crashes_again <- data.table(crashes_cyclist)
+#counts <-
