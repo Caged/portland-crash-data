@@ -4,7 +4,8 @@ require './app/env'
 require './app/models'
 require 'csv'
 
-crashes = Crash.pedestrians_and_cyclist
+#"isect_st_full_nm" LIKE '%82ND AVE%' or "st_full_nm" LIKE '%82ND AVE%')
+crashes = Crash.pedestrians.where("isect_st_full_nm LIKE '%82ND AVE%' or st_full_nm LIKE '%82ND AVE%'")
 csv_out = CSV.generate do |csv|
   csv << [
     :date,
